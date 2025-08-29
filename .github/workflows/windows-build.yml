@@ -1,0 +1,70 @@
+name: Windows EXE Build & Inno Setup Package
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 7 SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '7.0.x'
+
+      - name: Restore & Publish .NET 7 win-x64 self-contained
+        run: |
+          dotnet --info
+          dotnet restore ./client/Detector.csproj
+          dotnet publish ./client/Detector.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+
+      - name: Setup MSBuild (for .NET Framework)
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore (net48)
+        run: msbuild ./client-net48/DetectorNet48.csproj -t:Restore -p:Configuration=Release
+
+      - name: Build (net48)
+        run: msbuild ./client-net48/DetectorNet48.csproj -p:Configuration=Release
+
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build installer (.NET 7)
+        run: |
+          "$Env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe" installer\mydetector.iss
+        shell: pwsh
+
+      - name: Build installer (net48)
+        run: |
+          "$Env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe" installer\mydetector-net48.iss
+        shell: pwsh
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers
+          path: |
+            installer/MyDetectorInstaller.exe
+            installer/MyDetectorInstaller-net48.exe
+
+      - name: Upload published binaries (.NET 7)
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-net7
+          path: client/bin/Release/net7.0/win-x64/publish/
+
+      - name: Upload built binaries (net48)
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-net48
+          path: client-net48/bin/Release/
+
+
