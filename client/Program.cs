@@ -5,7 +5,6 @@ using System.Management;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
-using Microsoft.AspNetCore.WebUtilities;
 using System.Threading.Tasks;
 
 class Program
@@ -84,8 +83,8 @@ class Program
             try
             {
                 var uri = new Uri(first);
-                var q = QueryHelpers.ParseQuery(uri.Query);
-                return q.TryGetValue("session", out var vals) ? vals.ToString() : null;
+                var q = ParseQueryDict(uri.Query);
+                return q.TryGetValue("session", out var val) ? val : null;
             }
             catch
             {
@@ -104,12 +103,8 @@ class Program
             try
             {
                 var uri = new Uri(args[0]);
-                var q = QueryHelpers.ParseQuery(uri.Query);
-                if (q.TryGetValue("endpoint", out var vals))
-                {
-                    var ep = vals.ToString();
-                    if (!string.IsNullOrWhiteSpace(ep)) return ep;
-                }
+                var q = ParseQueryDict(uri.Query);
+                if (q.TryGetValue("endpoint", out var ep) && !string.IsNullOrWhiteSpace(ep)) return ep;
             }
             catch { }
         }
@@ -176,6 +171,33 @@ class Program
         }
         catch { }
         return null;
+    }
+
+    static System.Collections.Generic.Dictionary<string, string> ParseQueryDict(string query)
+    {
+        var dict = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrEmpty(query)) return dict;
+        if (query.StartsWith("?")) query = query.Substring(1);
+        var pairs = query.Split('&', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var p in pairs)
+        {
+            var idx = p.IndexOf('=');
+            string key, val;
+            if (idx >= 0)
+            {
+                key = p.Substring(0, idx);
+                val = p.Substring(idx + 1);
+            }
+            else
+            {
+                key = p;
+                val = string.Empty;
+            }
+            key = Uri.UnescapeDataString(key.Replace('+', ' '));
+            val = Uri.UnescapeDataString(val.Replace('+', ' '));
+            if (!string.IsNullOrEmpty(key)) dict[key] = val;
+        }
+        return dict;
     }
 
     static object GetOsInfo()
