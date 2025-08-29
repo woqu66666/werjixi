@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
@@ -6,10 +7,12 @@ const { v4: uuidv4 } = require('uuid');
 const bodyParser = require('body-parser');
 
 const app = express();
-const db = new Database('./data.db');
+const dbPath = path.join(__dirname, 'data.db');
+const db = new Database(dbPath);
 const fs = require('fs');
 
-app.use(cors());
+const corsOrigin = process.env.CORS_ORIGIN || '*';
+app.use(cors({ origin: corsOrigin === '*' ? true : corsOrigin }));
 app.use(bodyParser.json({ limit: '1mb' }));
 
 // 静态网站：托管 web 目录
@@ -92,8 +95,10 @@ app.get('/api/result', (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+const PORT = Number(process.env.PORT || 3000);
+const HOST = process.env.HOST || '0.0.0.0';
+app.get('/healthz', (req, res) => res.json({ ok: true }));
+app.listen(PORT, HOST, () => console.log(`Server listening on http://${HOST}:${PORT}`));
 
 
 
