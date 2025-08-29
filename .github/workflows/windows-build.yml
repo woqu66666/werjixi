@@ -23,9 +23,7 @@ jobs:
         run: |
           dotnet --info
           dotnet restore ./client/Detector.csproj
-          dotnet publish ./client/Detector.csproj -c Release -r win-x64 \
-            -p:SelfContained=false \
-            -p:PublishSingleFile=true
+          dotnet publish ./client/Detector.csproj -c Release -r win-x64 -p:SelfContained=false -p:PublishSingleFile=true
 
       - name: Package publish folder (.NET 8)
         shell: pwsh
