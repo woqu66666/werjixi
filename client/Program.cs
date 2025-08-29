@@ -7,7 +7,6 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.WebUtilities;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
 class Program
 {
@@ -43,18 +42,7 @@ class Program
                 }
             }
 
-            // 隐私说明与同意（首次运行也会弹窗确认）
-            var consent = MessageBox.Show(
-                "该工具将采集你的系统硬件信息（OS、CPU、内存、GPU、分辨率、磁盘等）并通过 HTTPS 上传到服务端以供网页使用。是否同意？\n\n详情请参阅 privacy.txt",
-                "允许上传系统信息？",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
-
-            if (consent != DialogResult.Yes)
-            {
-                Console.WriteLine("用户未同意，退出。");
-                return;
-            }
+            // 控制台模式：直接采集并上报（无需交互）
 
             Console.WriteLine("采集系统信息…");
             var report = new
@@ -265,13 +253,8 @@ class Program
     {
         try
         {
-            var scr = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
-            return new
-            {
-                width = scr.Width,
-                height = scr.Height,
-                primary = true
-            };
+            // 控制台版本为减少体积，不依赖 Windows.Forms，屏幕信息返回 null
+            return null;
         }
         catch { return null; }
     }
