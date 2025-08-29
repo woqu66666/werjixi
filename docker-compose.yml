@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  mydetector:
+    build: .
+    container_name: mydetector-server
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - HOST=0.0.0.0
+      - CORS_ORIGIN=*
+    volumes:
+      # 持久化数据库
+      - ./server/data.db:/app/data.db
+      # 挂载 artifacts 目录，方便放置 Detector.exe
+      - ./artifacts:/app/artifacts
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/healthz', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
