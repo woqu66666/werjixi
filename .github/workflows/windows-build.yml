@@ -34,32 +34,24 @@ jobs:
       - name: Build (net48)
         run: msbuild ./client-net48/DetectorNet48.csproj -p:Configuration=Release
 
-      - name: Install Inno Setup
-        run: choco install innosetup --yes --no-progress
-
-      - name: Build installer (.NET 7)
-        run: |
-          "$Env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe" installer\mydetector.iss
+      - name: Package publish folder (.NET 7)
         shell: pwsh
-
-      - name: Build installer (net48)
         run: |
-          "$Env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe" installer\mydetector-net48.iss
-        shell: pwsh
-
-      - name: Upload installer artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: installers
-          path: |
-            installer/MyDetectorInstaller.exe
-            installer/MyDetectorInstaller-net48.exe
+          $publishDir = "client/bin/Release/net7.0/win-x64/publish"
+          if (!(Test-Path $publishDir)) { throw "Publish directory not found: $publishDir" }
+          Compress-Archive -Path "$publishDir/*" -DestinationPath "publish-net7.zip" -Force
 
       - name: Upload published binaries (.NET 7)
         uses: actions/upload-artifact@v4
         with:
           name: publish-net7
           path: client/bin/Release/net7.0/win-x64/publish/
+
+      - name: Upload publish zip (.NET 7)
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-net7-zip
+          path: publish-net7.zip
 
       - name: Upload built binaries (net48)
         uses: actions/upload-artifact@v4
