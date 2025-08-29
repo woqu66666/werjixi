@@ -19,23 +19,20 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Restore & Publish .NET 8 win-x64 single-file trimmed (framework-dependent)
+      - name: Restore & Publish .NET 8 win-x64 single-file (framework-dependent)
         run: |
           dotnet --info
           dotnet restore ./client/Detector.csproj
           dotnet publish ./client/Detector.csproj -c Release -r win-x64 \
             -p:SelfContained=false \
-            -p:PublishSingleFile=true \
-            -p:PublishTrimmed=true \
-            -p:TrimMode=full \
-            -p:EnableCompressionInSingleFile=true
+            -p:PublishSingleFile=true
 
       - name: Package publish folder (.NET 8)
         shell: pwsh
         run: |
           $publishDir = "client/bin/Release/net8.0-windows/win-x64/publish"
           if (!(Test-Path $publishDir)) { throw "Publish directory not found: $publishDir" }
-          Compress-Archive -Path "$publishDir/*" -DestinationPath "publish-net7.zip" -Force
+          Compress-Archive -Path "$publishDir/*" -DestinationPath "publish-net8.zip" -Force
 
       - name: Upload published binaries (.NET 8)
         uses: actions/upload-artifact@v4
@@ -47,6 +44,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: publish-net8-zip
-          path: publish-net7.zip
+          path: publish-net8.zip
 
 
