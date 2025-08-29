@@ -1,0 +1,101 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MyDetector Demo</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; margin: 24px; }
+    #result { white-space: pre-wrap; background:#f6f6f6; padding:12px; border:1px solid #ddd; }
+    button { padding:8px 12px; }
+  </style>
+</head>
+<body>
+  <h2>MyDetector 网页示例</h2>
+  <p>点击下面按钮创建 session 并尝试唤起已安装的客户端。若未安装请先点击“下载安装”并安装，然后再次点击“检测”。</p>
+  <div>
+    <button id="startBtn">开始检测</button>
+    <a id="downloadLink" href="#" style="margin-left:12px;">下载安装（自动带 session）</a>
+  </div>
+  <p id="sessionLine" style="margin-top:12px; display:none;">
+    当前 session：<code id="sessionText"></code>
+    <button id="mockReportBtn" style="margin-left:8px;">模拟上报（用于测试）</button>
+  </p>
+  <p><strong>检测结果（服务器返回）：</strong></p>
+  <div id="status">尚未开始</div>
+  <pre id="result"></pre>
+
+<script>
+const API_BASE = 'http://localhost:3000';
+
+document.getElementById('startBtn').addEventListener('click', async () => {
+  document.getElementById('status').textContent = '创建 session…';
+  const r = await fetch(API_BASE + '/api/session', { method: 'POST' });
+  const j = await r.json();
+  const session = j.session;
+  window.currentSession = session;
+  document.getElementById('status').textContent = 'session: ' + session + '，尝试唤起客户端…';
+  // 下载链接改为带 session 的专属 exe
+  const dl = document.getElementById('downloadLink');
+  // 如果你部署了线上端点，在此替换成你的 HTTPS 地址
+  const endpoint = API_BASE + '/api/report';
+  dl.href = API_BASE + '/download/exe?session=' + encodeURIComponent(session) + '&endpoint=' + encodeURIComponent(endpoint);
+  // 显示 session 便于复制，或直接使用模拟上报
+  const sessionLine = document.getElementById('sessionLine');
+  const sessionText = document.getElementById('sessionText');
+  sessionText.textContent = session;
+  sessionLine.style.display = '';
+  // 尝试唤起自定义协议
+  const url = 'mydetector://start?session=' + encodeURIComponent(session);
+  // 这种写法会尝试导航当前页面到该协议（浏览器会尝试调用已注册的程序）
+  window.location = url;
+  // 提示用户如失败请点击下载并安装
+  pollResult(session);
+});
+
+// 一键模拟上报：用当前页面的 session 发起 /api/report
+document.getElementById('mockReportBtn').addEventListener('click', async () => {
+  const session = window.currentSession;
+  if (!session) {
+    alert('请先点击“开始检测”创建 session');
+    return;
+  }
+  document.getElementById('status').textContent = '发送模拟上报…';
+  const resp = await fetch(API_BASE + '/api/report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session,
+      os: { platform: 'Win32NT', version: 'Microsoft Windows 10' },
+      cpu: { name: 'Intel(R) Core(TM)', cores: 8 },
+      note: 'mock report from web button'
+    })
+  });
+  const jr = await resp.json();
+  document.getElementById('status').textContent = '上报完成：' + JSON.stringify(jr);
+});
+
+async function pollResult(session) {
+  const resultEl = document.getElementById('result');
+  document.getElementById('status').textContent = '等待客户端上报（轮询）…';
+  const start = Date.now();
+  for (let i = 0; i < 40; i++) { // 40 * 2s = 80s 超时
+    await new Promise(r => setTimeout(r, 2000));
+    const r = await fetch(API_BASE + '/api/result?session=' + encodeURIComponent(session));
+    const j = await r.json();
+    if (j.found) {
+      document.getElementById('status').textContent = '已收到上报';
+      resultEl.textContent = JSON.stringify(j.result, null, 2);
+      return;
+    } else {
+      document.getElementById('status').textContent = '等待中… (' + Math.floor((Date.now()-start)/1000) + 's)';
+    }
+  }
+  document.getElementById('status').textContent = '等待超时：客户端可能未安装或未运行';
+  resultEl.textContent = '';
+}
+</script>
+</body>
+</html>
+
+
+

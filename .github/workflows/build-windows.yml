@@ -1,0 +1,64 @@
+name: Build Windows Client (NET48) and Installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'client-net48/**'
+      - 'installer/**'
+      - '.github/workflows/build-windows.yml'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1.3.1
+
+      - name: Restore and Build (NET48 Release)
+        run: |
+          msbuild .\client-net48\DetectorNet48.csproj /t:Restore,Build /p:Configuration=Release
+
+      - name: Install Inno Setup
+        run: |
+          choco install innosetup -y --no-progress
+
+      - name: Build Installer (Inno Setup)
+        shell: pwsh
+        run: |
+          $env:Path += ";C:\Program Files (x86)\Inno Setup 6";
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" .\installer\mydetector-net48.iss
+
+      # 可选：对 EXE/安装器代码签名（需要在仓库设置 Secrets: CODESIGN_PFX, CODESIGN_PFX_PASSWORD）
+      # - name: Sign Binaries (optional)
+      #   if: ${{ false }}
+      #   shell: pwsh
+      #   run: |
+      #     $signtool = "C:\\Program Files (x86)\\Windows Kits\\10\\App Certification Kit\\signtool.exe"
+      #     $pfxPath = "$env:RUNNER_TEMP\\codesign.pfx"
+      #     [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String("${{ secrets.CODESIGN_PFX }}"))
+      #     $pwd = '${{ secrets.CODESIGN_PFX_PASSWORD }}'
+      #     $timestamp = 'http://timestamp.digicert.com'
+      #     & $signtool sign /f $pfxPath /p $pwd /tr $timestamp /td sha256 /fd sha256 .\client-net48\bin\Release\Detector.exe
+      #     Get-ChildItem -Recurse -Filter MyDetectorInstaller-net48.exe | ForEach-Object { & $signtool sign /f $pfxPath /p $pwd /tr $timestamp /td sha256 /fd sha256 $_.FullName }
+
+      - name: Collect Artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          Copy-Item .\client-net48\bin\Release\Detector.exe .\artifacts\ -Force
+          Get-ChildItem -Recurse -Filter MyDetectorInstaller-net48.exe | ForEach-Object { Copy-Item $_.FullName .\artifacts\ -Force }
+          dir .\artifacts
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-net48-build
+          path: artifacts/**
+          if-no-files-found: error
+
+
