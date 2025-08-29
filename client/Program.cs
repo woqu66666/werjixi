@@ -5,6 +5,7 @@ using System.Management;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.WebUtilities;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -95,8 +96,8 @@ class Program
             try
             {
                 var uri = new Uri(first);
-                var q = System.Web.HttpUtility.ParseQueryString(uri.Query);
-                return q.Get("session");
+                var q = QueryHelpers.ParseQuery(uri.Query);
+                return q.TryGetValue("session", out var vals) ? vals.ToString() : null;
             }
             catch
             {
@@ -115,9 +116,12 @@ class Program
             try
             {
                 var uri = new Uri(args[0]);
-                var q = System.Web.HttpUtility.ParseQueryString(uri.Query);
-                var ep = q.Get("endpoint");
-                if (!string.IsNullOrWhiteSpace(ep)) return ep;
+                var q = QueryHelpers.ParseQuery(uri.Query);
+                if (q.TryGetValue("endpoint", out var vals))
+                {
+                    var ep = vals.ToString();
+                    if (!string.IsNullOrWhiteSpace(ep)) return ep;
+                }
             }
             catch { }
         }
