@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.Management" Version="7.0.0" />
+    <PackageReference Include="System.Web.HttpUtility" Version="7.0.0" />
   </ItemGroup>
 </Project>
 
